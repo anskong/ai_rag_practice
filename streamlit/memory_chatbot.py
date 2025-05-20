@@ -13,6 +13,12 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories.streamlit import StreamlitChatMessageHistory
 
+from langchain_anthropic import ChatAnthropic
+from anthropic import Anthropic
+import httpx  
+
+
+
 # 환경변수 읽어오기
 load_dotenv(override=True)  # .env 파일을 덮어쓰기 모드로 읽기
 
@@ -72,8 +78,57 @@ def initialize_components(selected_model):
         ]
     )
 
-    llm = ChatOpenAI(model=selected_model)
+    vfy_client = httpx.Client(verify=False)
+    # llm = ChatOpenAI(model=selected_model)
+    # 1. 직접 Anthropic
+    client = Anthropic(api_key=anthropic_key, http_client=vfy_client)
+
+    # 2. Langchain Anthropic 모델 호출
+    llm = ChatAnthropic(
+        # model_name ="claude-3-opus-20240229",
+        model_name=selected_model,
+        anthropic_api_key=anthropic_key,)
+
+    llm._client = client
+    
     history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
     question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
     return rag_chain
+# Streamlit UI
+st.header("헌법 Q&A 챗봇 💬 📚")
+option = st.selectbox("Select GPT Model", ("claude-3-opus-20240229","claude-3-7-sonnet-20250219"))
+rag_chain = initialize_components(option)
+chat_history = StreamlitChatMessageHistory(key="chat_messages")
+
+conversational_rag_chain = RunnableWithMessageHistory(
+    rag_chain,
+    lambda session_id: chat_history,
+    input_messages_key="input",
+    history_messages_key="history",
+    output_messages_key="answer",
+)
+
+
+if "messages" not in st.session_state:
+    st.session_state["messages"] = [{"role": "assistant", 
+                                     "content": "헌법에 대해 무엇이든 물어보세요!"}]
+
+for msg in chat_history.messages:
+    st.chat_message(msg.type).write(msg.content)
+
+
+if prompt_message := st.chat_input("Your question"):
+    st.chat_message("human").write(prompt_message)
+    with st.chat_message("ai"):
+        with st.spinner("Thinking..."):
+            config = {"configurable": {"session_id": "any"}}
+            response = conversational_rag_chain.invoke(
+                {"input": prompt_message},
+                config)
+            
+            answer = response['answer']
+            st.write(answer)
+            with st.expander("참고 문서 확인"):
+                for doc in response['context']:
+                    st.markdown(doc.metadata['source'], help=doc.page_content)
