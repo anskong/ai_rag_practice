@@ -44,7 +44,7 @@ def create_vector_store(_docs):
 # Initialize the LangChain components
 @st.cache_resource
 def initialize_components(selected_model):
-    file_path = r"/Users/youngho_moon/Library/CloudStorage/GoogleDrive-anskong@gmail.com/내 드라이브/LLM-RAG-LangChain/대한민국헌법(헌법)(제00010호)(19880225).pdf"
+    file_path = r"G:\내 드라이브\LLM-RAG-LangChain\제안요청서_바레인.pdf"
     pages = load_and_split_pdf(file_path)
     vectorstore = create_vector_store(pages)
     retriever = vectorstore.as_retriever()
@@ -79,17 +79,17 @@ def initialize_components(selected_model):
     )
 
     vfy_client = httpx.Client(verify=False)
-    # llm = ChatOpenAI(model=selected_model)
-    # 1. 직접 Anthropic
-    client = Anthropic(api_key=anthropic_key, http_client=vfy_client)
+    llm = ChatOpenAI(model=selected_model,api_key=openai_key, temperature=0.0)
+    # # 1. 직접 Anthropic
+    # client = Anthropic(api_key=anthropic_key, http_client=vfy_client)
 
-    # 2. Langchain Anthropic 모델 호출
-    llm = ChatAnthropic(
-        # model_name ="claude-3-opus-20240229",
-        model_name=selected_model,
-        anthropic_api_key=anthropic_key,)
+    # # 2. Langchain Anthropic 모델 호출
+    # llm = ChatAnthropic(
+    #     # model_name ="claude-3-opus-20240229",
+    #     model_name=selected_model,
+    #     anthropic_api_key=anthropic_key,)
 
-    llm._client = client
+    # llm._client = client
     
     history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
     question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
@@ -97,7 +97,7 @@ def initialize_components(selected_model):
     return rag_chain
 # Streamlit UI
 st.header("헌법 Q&A 챗봇 💬 📚")
-# option = st.selectbox("Select GPT Model", ("claude-3-opus-20240229","claude-3-7-sonnet-20250219"))
+option = st.selectbox("Select GPT Model", ("gpt-4o", "gpt-3.5-turbo-0125"))
 
 rag_chain = initialize_components(option)
 chat_history = StreamlitChatMessageHistory(key="chat_messages")
