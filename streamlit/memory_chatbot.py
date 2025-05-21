@@ -97,7 +97,8 @@ def initialize_components(selected_model):
     return rag_chain
 # Streamlit UI
 st.header("헌법 Q&A 챗봇 💬 📚")
-option = st.selectbox("Select GPT Model", ("claude-3-opus-20240229","claude-3-7-sonnet-20250219"))
+# option = st.selectbox("Select GPT Model", ("claude-3-opus-20240229","claude-3-7-sonnet-20250219"))
+
 rag_chain = initialize_components(option)
 chat_history = StreamlitChatMessageHistory(key="chat_messages")
 
