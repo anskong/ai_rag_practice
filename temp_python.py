@@ -1,4 +1,3 @@
-# testing python code
 
 fruits = ["apple", "banana", "cherry"]
 
@@ -14,3 +13,5 @@ var1 = (
 
 print(type(var1))
 print(var1)
+
+import this
